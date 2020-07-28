@@ -17,6 +17,7 @@ defmodule CbreportWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+    get "/workflows", PageController, :workflows
   end
 
   # Other scopes may use custom stacks.

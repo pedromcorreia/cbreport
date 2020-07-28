@@ -1,16 +1,27 @@
 defmodule CbreportWeb.PageController do
   use CbreportWeb, :controller
 
-  def index(conn, _params) do
-    columns = request_workflows()
-    active_cards = request_stories(columns)
-    create_json(active_cards, columns)
+  def index(conn, %{"project_id" => project_id}) do
+    project_id = String.to_integer(project_id)
+    columns = request_workflows(project_id)
 
-    render(conn, "index.html")
+    active_cards = request_stories(columns, project_id)
+
+    json = create_json(active_cards, columns)
+
+    render(conn, "index.html", json: json)
   end
 
-  defp request_stories(columns) do
-    if %HTTPoison.Response{status_code: 200, body: body} = get_stories() do
+  def workflows(conn, _params) do
+    json = request_spaces()
+
+    render(conn, "workflows.html", json: json)
+  end
+
+  def token(), do: ''
+
+  defp request_stories(columns, project_id) do
+    if %HTTPoison.Response{status_code: 200, body: body} = get_stories(project_id) do
       columns_ids = Enum.map(columns, fn x -> x["id"] end)
 
       Enum.filter(Jason.decode!(body), fn x ->
@@ -21,11 +32,11 @@ defmodule CbreportWeb.PageController do
     end
   end
 
-  defp request_workflows() do
+  defp request_workflows(project_id) do
     if %HTTPoison.Response{status_code: 200, body: body} = get_workflows() do
       body
       |> Jason.decode!()
-      |> Enum.filter(fn x -> x["project_ids"] == [42562] end)
+      |> Enum.filter(fn x -> Enum.member?(x["project_ids"], project_id) end)
       |> List.first()
       |> Map.get("states")
       |> Enum.filter(fn x -> x["type"] == "started" end)
@@ -34,15 +45,29 @@ defmodule CbreportWeb.PageController do
     end
   end
 
-  defp get_stories do
-    url =
-      "https://api.clubhouse.io/api/v2/projects/42562/stories?token=5f162a4d-f8f8-495b-ae95-83832b79dc24"
+  defp request_spaces() do
+    if %HTTPoison.Response{status_code: 200, body: body} = get_spaces() do
+      body
+      |> Jason.decode!()
+    else
+      nil
+    end
+  end
+
+  defp get_spaces() do
+    url = "https://api.clubhouse.io/api/v3/projects?token=#{token()}"
+
+    HTTPoison.get!(url)
+  end
+
+  defp get_stories(project_id) do
+    url = "https://api.clubhouse.io/api/v2/projects/#{project_id}/stories?token=#{token()}"
 
     HTTPoison.get!(url)
   end
 
   defp get_workflows do
-    url = "https://api.clubhouse.io/api/v3/workflows?token=5f162a4d-f8f8-495b-ae95-83832b79dc24"
+    url = "https://api.clubhouse.io/api/v3/workflows?token=#{token()}"
 
     HTTPoison.get!(url)
   end
@@ -60,6 +85,7 @@ defmodule CbreportWeb.PageController do
         duration: date_moved(x["moved_at"])
       }
     end)
+    |> Enum.sort(&(&1.duration > &2.duration))
   end
 
   defp date_moved(moved_at) do

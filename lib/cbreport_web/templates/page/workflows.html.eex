@@ -1,0 +1,26 @@
+<section class="phx-hero">
+  <h1>Welcome to card cbs</h1>
+  <p>Prototype for Cbhouse</p>
+</section>
+
+<table class="table table-dark">
+  <thead>
+    <tr>
+      <th scope="col">Name space</th>
+      <th scope="col">Id</th>
+      <th scope="col">Description</th>
+      <th scope="col">Analysis</th>
+    </tr>
+  </thead>
+  <tbody>
+    <%= Enum.map(@json, fn space ->%>
+      <tr>
+        <th><a href="<%= space["app_url"] %>" target="_blank"><%=  space["name"]%><a/></th>
+        <td><%= space["id"] %></td>
+        <td><%= space["description"] %></td>
+        <td><%= link("check analysis", to: link_project(space["id"])) %></td>
+      </tr>
+    <% end) %>
+    </tr>
+  </tbody>
+</table>
